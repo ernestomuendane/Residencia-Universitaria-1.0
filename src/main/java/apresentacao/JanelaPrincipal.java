@@ -16,7 +16,7 @@ public class JanelaPrincipal extends JFrame {
         separadores.addTab("Residências", new JPanel());
         separadores.addTab("Quartos", new JPanel());
         separadores.addTab("Camas", new JPanel());
-        separadores.addTab("Categorias", new JPanel());
+        separadores.addTab("Categorias", new PainelCategoria());
 
         add(separadores, BorderLayout.CENTER);
     }
