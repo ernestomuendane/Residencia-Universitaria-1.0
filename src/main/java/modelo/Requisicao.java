@@ -7,7 +7,7 @@ import java.util.Objects;
 
 public class Requisicao {
     private final int idRequisicao;
-    private final LocalDateTime data = LocalDateTime.now();
+    private LocalDateTime data = LocalDateTime.now();
     private ResultadoRequisicao resultado;
     private final Estudante estudante;
     private final Residencia residencia;
@@ -29,7 +29,7 @@ public class Requisicao {
         estudante.registarRequisicao(this);
         residencia.registarRequisicao(this);
     }
-    
+
     public int getIdRequisicao() {
         return idRequisicao;
     }
