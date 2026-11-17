@@ -90,7 +90,6 @@ public class JanelaPrincipal extends JFrame {
         ficheiro.addSeparator();
         ficheiro.add(sair);
 
-        // Item de marcar/desmarcar: dispara um ItemListener
         JCheckBoxMenuItem automatica = new JCheckBoxMenuItem(
                 "Atualização automática (" + INTERVALO_ATUALIZACAO_S + " s)", true);
         automatica.addItemListener(e -> {
@@ -209,7 +208,7 @@ public class JanelaPrincipal extends JFrame {
             cabecalho.add(tabela.getColumnName(c));
         }
         List<List<String>> linhas = new ArrayList<>();
-        for (int r = 0; r < tabela.getRowCount(); r++) {
+        for (int r = 0; r < tabela.getRowCount(); r++) {   // ordem e filtro que o utilizador está a ver
             List<String> linha = new ArrayList<>();
             for (int c = 0; c < tabela.getColumnCount(); c++) {
                 linha.add(String.valueOf(tabela.getValueAt(r, c)));
