@@ -1,0 +1,4 @@
+# Copia este ficheiro para rue.properties, na pasta onde corres o programa, e ajusta.
+rue.url=jdbc:mariadb://localhost:3306/rue
+rue.utilizador=root
+rue.palavraPasse=

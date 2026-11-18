@@ -1,4 +1,3 @@
-
 package visao;
 
 import modelo.Administrador;
@@ -10,7 +9,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -30,12 +29,12 @@ public class PainelAdministradores extends JPanel implements Exportavel {
     private final JTextField nome = new JTextField(14);
     private final JTextField telefone = new JTextField(14);
     private final JTextField email = new JTextField(14);
-    private final JTextField dataInicio = new JTextField(Util.hoje(), 14);
+    private final JTextField dataInicio = new JTextField(Util.agora(), 14);
     private final JTextField grau = new JTextField(14);
 
     private final JComboBox<Residencia> residencia = Util.combo(Residencia::getNome);
-    private final JTextField inicioGestao = new JTextField(Util.hoje(), 14);
-    private final JTextField fimGestao = new JTextField(Util.hoje(), 14);
+    private final JTextField inicioGestao = new JTextField(Util.agora(), 14);
+    private final JTextField fimGestao = new JTextField(Util.agora(), 14);
 
     public PainelAdministradores(ServicoResidencia servico, Tarefas tarefas) {
         super(new BorderLayout(8, 8));
@@ -46,7 +45,7 @@ public class PainelAdministradores extends JPanel implements Exportavel {
         Util.campo(form, 0, "Nome:", nome);
         Util.campo(form, 1, "Telefone:", telefone);
         Util.campo(form, 2, "Email:", email);
-        Util.campo(form, 3, "Início (dd/MM/aaaa):", dataInicio);
+        Util.campo(form, 3, "Início (dd/MM/aaaa HH:mm):", dataInicio);
         Util.campo(form, 4, "Grau:", grau);
         JButton registar = new JButton("Registar");
         JButton guardar = new JButton("Guardar alterações");
@@ -57,7 +56,7 @@ public class PainelAdministradores extends JPanel implements Exportavel {
             String n = Util.obrigatorio(nome.getText(), "O nome");
             String t = telefone.getText().trim();
             String m = email.getText().trim();
-            LocalDate d = Util.data(dataInicio.getText(), "A data de início");
+            LocalDateTime d = Util.dataHora(dataInicio.getText(), "A data de início");
             String g = grau.getText();
             return () -> servico.registarAdministrador(n, t, m, d, g);
         }, () -> {
@@ -76,8 +75,8 @@ public class PainelAdministradores extends JPanel implements Exportavel {
 
         JPanel formGestao = Util.formulario("Gestão (do administrador selecionado)");
         Util.campo(formGestao, 0, "Residência:", residencia);
-        Util.campo(formGestao, 1, "Início (dd/MM/aaaa):", inicioGestao);
-        Util.campo(formGestao, 2, "Fim (dd/MM/aaaa):", fimGestao);
+        Util.campo(formGestao, 1, "Início (dd/MM/aaaa HH:mm):", inicioGestao);
+        Util.campo(formGestao, 2, "Fim (dd/MM/aaaa HH:mm):", fimGestao);
         JButton atribuir = new JButton("Atribuir gestão");
         JButton encerrar = new JButton("Encerrar gestão");
         Util.linhaBotoes(formGestao, 3, atribuir, encerrar);
@@ -85,12 +84,12 @@ public class PainelAdministradores extends JPanel implements Exportavel {
         atribuir.addActionListener(e -> tarefas.executar(this, "Atribuir gestão", () -> {
             Administrador a = Util.exigir(Util.selecionado(tabelaAdm, linhasAdm), "Seleciona um administrador");
             Residencia r = Util.exigir((Residencia) residencia.getSelectedItem(), "Cria primeiro uma residência");
-            LocalDate inicio = Util.data(inicioGestao.getText(), "A data de início");
+            LocalDateTime inicio = Util.dataHora(inicioGestao.getText(), "A data de início");
             return () -> servico.atribuirGestao(a, r, inicio);
         }));
         encerrar.addActionListener(e -> tarefas.executar(this, "Encerrar gestão", () -> {
             Gestao g = Util.exigir(Util.selecionado(tabelaGestao, linhasGestao), "Seleciona uma gestão na tabela inferior");
-            LocalDate fim = Util.data(fimGestao.getText(), "A data de fim");
+            LocalDateTime fim = Util.dataHora(fimGestao.getText(), "A data de fim");
             return () -> servico.encerrarGestao(g, fim);
         }));
 
@@ -141,14 +140,6 @@ public class PainelAdministradores extends JPanel implements Exportavel {
                 g.getResidencia().getNome(), Util.fmt(g.getDataInicio()), Util.fmt(g.getDataFim()), g.getEstado()});
     }
 
-    @Override
-    public JTable getTabelaPrincipal() {
-        return tabelaAdm;
-    }
-
-    @Override
-    public String getNomeExportacao() {
-        return "administradores";
-    }
+    @Override public JTable getTabelaPrincipal() { return tabelaAdm; }
+    @Override public String getNomeExportacao() { return "administradores"; }
 }
-

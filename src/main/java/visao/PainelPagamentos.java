@@ -20,7 +20,8 @@ public class PainelPagamentos extends JPanel implements Exportavel {
     private final List<Pagamento> linhas = new ArrayList<>();
 
     private final JComboBox<Contracto> contracto = Util.combo(c ->
-            "Contracto #" + c.getId() + " · " + c.getEstudante().getNome() + " · " + c.getEstado());
+            "Contracto #" + c.getId() + " · " + c.getEstudante().getNome() + " · " + c.getEstado()
+                    + " · " + c.getPrecoMensal().toPlainString() + "/mês");
     private final JComboBox<MetodoPagamento> metodo = new JComboBox<>(MetodoPagamento.values());
     private final JSpinner meses = new JSpinner(new SpinnerNumberModel(1, 1, 60, 1));
     private final JLabel valor = new JLabel("—");
@@ -30,7 +31,7 @@ public class PainelPagamentos extends JPanel implements Exportavel {
         this.servico = servico;
         setBorder(new EmptyBorder(8, 8, 8, 8));
 
-        JPanel form = Util.formulario("Novo pagamento");
+        JPanel form = Util.formulario("Novo pagamento (ativa o contracto)");
         Util.campo(form, 0, "Contracto:", contracto);
         Util.campo(form, 1, "Método:", metodo);
         Util.campo(form, 2, "Nº de meses:", meses);
@@ -59,7 +60,7 @@ public class PainelPagamentos extends JPanel implements Exportavel {
 
     private void atualizar() {
         List<Contracto> abertos = servico.getContractos().stream()
-                .filter(c -> c.getEstado() == EstadoContracto.PENDENTE || c.getEstado() == EstadoContracto.ATIVO)
+                .filter(c -> c.getEstado() != EstadoContracto.CANCELADO && !c.temPagamento())
                 .collect(Collectors.toList());
         Util.preencher(contracto, abertos);
         atualizarValor();
@@ -69,7 +70,6 @@ public class PainelPagamentos extends JPanel implements Exportavel {
                 p.getValorTotal().toPlainString()});
     }
 
-    /** Pré-visualização: meses × preço mensal da categoria (o modelo calcula o mesmo valor ao gravar). */
     private void atualizarValor() {
         Contracto c = (Contracto) contracto.getSelectedItem();
         if (c == null) {

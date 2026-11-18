@@ -1,0 +1,66 @@
+SISTEMA DE GESTÃO DE RESIDÊNCIA UNIVERSITÁRIA (RUE) — Java Swing + MariaDB
+Requisitos: Java 8 ou superior; MariaDB; driver mariadb-java-client.
+
+CONTEÚDO DO ZIP
+ src/      todo o código Java (pacotes modelo, dao, servico, visao, app, teste)
+ sql/      a base de dados:
+             rue.sql                estrutura (CREATE DATABASE rue + 10 tabelas)
+             rue-dados-exemplo.sql  dados de exemplo (correr depois de rue.sql)
+             rue-completa.sql       as duas coisas num só ficheiro (útil no phpMyAdmin/HeidiSQL/Workbench)
+ lib/      aqui vai o driver JDBC do MariaDB (não incluído)
+ *.sh / *.bat   compilar, executar, testar-regras, criar-bd
+ rue.properties.exemplo   configuração da ligação (utilizador, palavra-passe, URL)
+
+PASSOS
+ 1. Base de dados:   criar-bd.bat com-dados   (Windows)   |   ./criar-bd.sh root --com-dados   (Linux/macOS)
+                     ou importa sql/rue-completa.sql com a tua ferramenta (phpMyAdmin, HeidiSQL, ...).
+                     Sem "com-dados" a base fica vazia; depois usa Ficheiro > Carregar dados de exemplo.
+ 2. Driver:          põe o .jar do mariadb-java-client em lib/
+ 3. Ligação:         copia rue.properties.exemplo para rue.properties e ajusta utilizador/palavra-passe
+                     (sem ficheiro: jdbc:mariadb://localhost:3306/rue, utilizador root, sem palavra-passe)
+ 4. Compilar:        compilar.bat  |  ./compilar.sh
+ 5. Testar regras:   testar-regras.bat  |  ./testar-regras.sh     (opcional, não precisa de BD)
+ 6. Executar:        executar.bat  |  ./executar.sh
+
+IDE (NetBeans/IntelliJ/Eclipse): cria um projeto Java, copia a pasta src/ para as fontes, adiciona
+lib/mariadb-java-client.jar às bibliotecas e define app.Main como classe principal. O pacote "teste" é opcional.
+
+BASE DE DADOS (10 tabelas)
+ Categoria, Residencia, Quarto, Cama, Estudante, Administrador, Gestao, Requisicao, Contracto, Pagamento
+ Estudante e Administrador são tabelas independentes. Os valores de estado são guardados como ENUM com o
+ nome do enum Java (ex.: DISPONIVEL, RESERVADA, OCUPADA, MANUTENCAO). Todas as datas são DATETIME.
+ Restrições que a BD também garante: Quarto único por (residência, número); Contracto único por requisição;
+ Pagamento único por contracto.
+
+CLASSES
+ modelo   Utente (abstrata), Estudante, Administrador, Residencia, Categoria, Quarto, Cama, Gestao,
+          Requisicao, Contracto, Pagamento + enums Sexo, EstadoCama, EstadoContracto, ResultadoRequisicao,
+          MetodoPagamento, EstadoGestao
+ dao      Conexao, Transacao, Sql, Datas, DaoException + CategoriaDao, ResidenciaDao, QuartoDao, CamaDao,
+          EstudanteDao, AdministradorDao, GestaoDao, RequisicaoDao, ContractoDao, PagamentoDao
+ servico  ServicoResidencia
+ visao    JanelaPrincipal, MenuPrincipal, EcraArranque, BarraEstado, Ocupado, Tarefas, MonitorBd,
+          Exportador, Exportavel, Util e os painéis (Resumo, Residencias, Categorias, Estudantes,
+          Administradores, Requisicoes, Contractos, Pagamentos)
+ app      Main
+ teste    TesteRegras
+
+REGRAS DE NEGÓCIO IMPLEMENTADAS NO MODELO
+ - Quarto: número único dentro da residência; nº de camas <= capacidade da categoria.
+ - Administrador gere uma só residência de cada vez; uma residência tem um só administrador de cada vez
+   (ao longo do tempo pode ter vários). Pode haver administradores registados sem gerir nenhuma.
+ - Requisição nasce PENDENTE e é decidida (APROVADO / NAO_APROVADO) uma só vez, pelo administrador
+   responsável pela residência no momento (consulta a Gestao).
+ - Só uma requisição aprovada gera contracto (no máximo um). O contracto é gerado e cancelado pelo
+   administrador responsável de momento.
+ - Cama: DISPONIVEL -> RESERVADA (contracto gerado) -> OCUPADA (pagamento feito) -> DISPONIVEL (contracto
+   cancelado). MANUTENCAO decide-se à mão (só a partir de DISPONIVEL).
+ - Uma cama pode ter vários contractos ao longo do tempo, mas só um de cada vez.
+ - Contracto: PENDENTE -> ATIVO (com o pagamento) ; CANCELADO. Um contracto pendente sem pagamento é cancelado
+   (Operações > Cancelar contractos pendentes sem pagamento).
+ - Pagamento: no máximo um por contracto; valorTotal = totalMeses x preço da categoria; a data é a do momento.
+ - Todos os atributos de data guardam data e hora (LocalDateTime / DATETIME).
+
+THREADS
+ EDT (interface) | rue-bd (SwingWorker numa thread única para a BD) | rue-monitor (ligação e atualização
+ periódica) | SwingWorker do ecrã de arranque. O modelo só é lido pela EDT quando não há operação em curso.

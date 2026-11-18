@@ -33,7 +33,7 @@ public class PainelResumo extends JPanel {
         JPanel cartoes = new JPanel(new GridLayout(2, 4, 12, 12));
         cartoes.add(cartao("Residências", residencias));
         cartoes.add(cartao("Quartos", quartos));
-        cartoes.add(cartao("Camas livres", camasLivres));
+        cartoes.add(cartao("Camas disponíveis", camasLivres));
         cartoes.add(cartao("Estudantes", estudantes));
         cartoes.add(cartao("Administradores", administradores));
         cartoes.add(cartao("Requisições pendentes", requisicoesPendentes));
@@ -84,7 +84,7 @@ public class PainelResumo extends JPanel {
             nQuartos += r.getQuartos().size();
             for (Cama c : r.getCamas()) {
                 camas++;
-                if (c.getEstado() == EstadoCama.LIVRE) livres++;
+                if (c.getEstado() == EstadoCama.DISPONIVEL) livres++;
                 if (c.getEstado() == EstadoCama.OCUPADA) ocupadas++;
             }
         }

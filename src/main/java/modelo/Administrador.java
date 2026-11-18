@@ -1,7 +1,5 @@
 package modelo;
 
-
-import java.sql.Date;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -10,13 +8,15 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class Administrador extends Utente {
+
     private final int idAdministrador;
     private final LocalDateTime dataInicio;
     private String grau;
     private final List<Gestao> gestoes = new ArrayList<>();
     private final List<Requisicao> requisicoes = new ArrayList<>();
 
-    public Administrador(int idAdministrador, String nome, String telefone, String email, LocalDateTime dataInicio, String grau, List<Gestao> gestoes) {
+    public Administrador(int idAdministrador, String nome, String telefone, String email,
+                         LocalDateTime dataInicio, String grau) {
         super(nome, telefone, email);
         this.idAdministrador = idAdministrador;
         this.dataInicio = Objects.requireNonNull(dataInicio, "A data de início é obrigatória");
@@ -41,7 +41,7 @@ public class Administrador extends Utente {
     }
 
     public void setGrau(String grau) {
-        if (grau == null || grau.isBlank()) {
+        if (grau == null || grau.trim().isEmpty()) {
             throw new IllegalArgumentException("O grau é obrigatório");
         }
         this.grau = grau;
@@ -79,7 +79,6 @@ public class Administrador extends Utente {
         requisicao.decidir(this, ResultadoRequisicao.NAO_APROVADO);
     }
 
-
     public List<Requisicao> getRequisicoes() {
         return Collections.unmodifiableList(requisicoes);
     }
@@ -105,11 +104,9 @@ public class Administrador extends Utente {
 
     @Override
     public String toString() {
-        return "Administrador{" +
-                "idAdministrador=" + idAdministrador +
+        return "Administrador{idAdministrador=" + idAdministrador + ", " + super.toString() +
                 ", dataInicio=" + dataInicio +
                 ", grau='" + grau + '\'' +
                 '}';
     }
 }
-

@@ -1,0 +1,32 @@
+-- Dados de exemplo da base de dados RUE.
+-- Corre DEPOIS de rue.sql, com a base de dados vazia:  mariadb -u root -p < sql/rue-dados-exemplo.sql
+SET NAMES utf8mb4;
+USE rue;
+INSERT INTO `Categoria` (`idCategoria`, `nomeCategoria`, `capacidade`, `preco`) VALUES (1,'Normal',2,2500.00);
+INSERT INTO `Categoria` (`idCategoria`, `nomeCategoria`, `capacidade`, `preco`) VALUES (2,'Suite',1,4500.00);
+INSERT INTO `Residencia` (`idResidencia`, `nome`, `tipo`) VALUES (1,'Residência Central','Mista');
+INSERT INTO `Residencia` (`idResidencia`, `nome`, `tipo`) VALUES (2,'Residência Norte','Feminina');
+INSERT INTO `Quarto` (`idQuarto`, `numero`, `idResidencia`, `idCategoria`) VALUES (1,101,1,1);
+INSERT INTO `Quarto` (`idQuarto`, `numero`, `idResidencia`, `idCategoria`) VALUES (2,102,1,1);
+INSERT INTO `Quarto` (`idQuarto`, `numero`, `idResidencia`, `idCategoria`) VALUES (3,103,1,1);
+INSERT INTO `Quarto` (`idQuarto`, `numero`, `idResidencia`, `idCategoria`) VALUES (4,201,1,2);
+INSERT INTO `Quarto` (`idQuarto`, `numero`, `idResidencia`, `idCategoria`) VALUES (5,101,2,1);
+INSERT INTO `Quarto` (`idQuarto`, `numero`, `idResidencia`, `idCategoria`) VALUES (6,102,2,1);
+INSERT INTO `Cama` (`idCama`, `estado`, `idQuarto`) VALUES (1,'DISPONIVEL',1);
+INSERT INTO `Cama` (`idCama`, `estado`, `idQuarto`) VALUES (2,'DISPONIVEL',1);
+INSERT INTO `Cama` (`idCama`, `estado`, `idQuarto`) VALUES (3,'DISPONIVEL',2);
+INSERT INTO `Cama` (`idCama`, `estado`, `idQuarto`) VALUES (4,'DISPONIVEL',2);
+INSERT INTO `Cama` (`idCama`, `estado`, `idQuarto`) VALUES (5,'DISPONIVEL',3);
+INSERT INTO `Cama` (`idCama`, `estado`, `idQuarto`) VALUES (6,'DISPONIVEL',3);
+INSERT INTO `Cama` (`idCama`, `estado`, `idQuarto`) VALUES (7,'DISPONIVEL',4);
+INSERT INTO `Cama` (`idCama`, `estado`, `idQuarto`) VALUES (8,'DISPONIVEL',5);
+INSERT INTO `Cama` (`idCama`, `estado`, `idQuarto`) VALUES (9,'DISPONIVEL',5);
+INSERT INTO `Cama` (`idCama`, `estado`, `idQuarto`) VALUES (10,'DISPONIVEL',6);
+INSERT INTO `Cama` (`idCama`, `estado`, `idQuarto`) VALUES (11,'DISPONIVEL',6);
+INSERT INTO `Estudante` (`idEstudante`, `nome`, `telefone`, `email`, `sexo`, `curso`) VALUES (1,'Carlos Mondlane','845550101','carlos@estudante.uni.mz','MASCULINO','Engenharia Informática');
+INSERT INTO `Estudante` (`idEstudante`, `nome`, `telefone`, `email`, `sexo`, `curso`) VALUES (2,'Maria Chissano','825550202','maria@estudante.uni.mz','FEMININO','Medicina');
+INSERT INTO `Administrador` (`idAdministrador`, `nome`, `telefone`, `email`, `dataInicio`, `grau`) VALUES (1,'Ana Macamo','841234567','ana.macamo@uni.mz','2024-11-18 04:37:19','Sénior');
+INSERT INTO `Administrador` (`idAdministrador`, `nome`, `telefone`, `email`, `dataInicio`, `grau`) VALUES (2,'Paulo Nhaca','829876543','paulo.nhaca@uni.mz','2026-03-18 04:37:19','Júnior');
+INSERT INTO `Administrador` (`idAdministrador`, `nome`, `telefone`, `email`, `dataInicio`, `grau`) VALUES (3,'Rita Sitoe','834445566','rita.sitoe@uni.mz','2026-10-18 04:37:19','Júnior');
+INSERT INTO `Gestao` (`idResidencia`, `idAdministrador`, `dataInicio`, `dataFim`, `estado`) VALUES (1,1,'2026-05-18 04:37:19',NULL,'ATIVA');
+INSERT INTO `Gestao` (`idResidencia`, `idAdministrador`, `dataInicio`, `dataFim`, `estado`) VALUES (2,2,'2026-08-18 04:37:19',NULL,'ATIVA');

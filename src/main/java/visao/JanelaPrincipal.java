@@ -10,7 +10,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public class JanelaPrincipal extends JFrame {
+public class JanelaPrincipal extends JFrame implements MenuPrincipal.Acoes {
 
     private static final int INTERVALO_ATUALIZACAO_S = 30;
 
@@ -20,6 +20,7 @@ public class JanelaPrincipal extends JFrame {
     private final Ocupado ocupado = new Ocupado();
     private final MonitorBd monitor;
     private final JTabbedPane abas = new JTabbedPane();
+    private final PainelContractos painelContractos;
     private long ultimaAtualizacaoPorFoco;
 
     public JanelaPrincipal(ServicoResidencia servico) {
@@ -28,7 +29,7 @@ public class JanelaPrincipal extends JFrame {
         this.tarefas = new Tarefas(servico);
         this.monitor = new MonitorBd(servico, barra, tarefas);
 
-        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE); // quem decide é o WindowListener
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         setSize(1200, 780);
         setLocationRelativeTo(null);
 
@@ -39,13 +40,14 @@ public class JanelaPrincipal extends JFrame {
         });
         tarefas.aoMensagem(barra::mensagem);
 
+        painelContractos = new PainelContractos(servico, tarefas);
         abas.addTab("Resumo", new PainelResumo(servico, tarefas));
         abas.addTab("Residências", new PainelResidencias(servico, tarefas));
         abas.addTab("Categorias", new PainelCategorias(servico, tarefas));
         abas.addTab("Estudantes", new PainelEstudantes(servico, tarefas));
         abas.addTab("Administradores", new PainelAdministradores(servico, tarefas));
         abas.addTab("Requisições", new PainelRequisicoes(servico, tarefas));
-        abas.addTab("Contractos", new PainelContractos(servico, tarefas));
+        abas.addTab("Contractos", painelContractos);
         abas.addTab("Pagamentos", new PainelPagamentos(servico, tarefas));
 
         JPanel conteudo = new JPanel(new BorderLayout());
@@ -53,77 +55,15 @@ public class JanelaPrincipal extends JFrame {
         conteudo.add(barra, BorderLayout.SOUTH);
         setContentPane(conteudo);
 
-        setJMenuBar(criarMenu());
+        setJMenuBar(new MenuPrincipal(this, INTERVALO_ATUALIZACAO_S));
         instalarAtalhosDeSeparadores();
         instalarEventosDaJanela();
 
         monitor.atualizacaoAutomatica(true, INTERVALO_ATUALIZACAO_S);
     }
 
-    private JMenuBar criarMenu() {
-        int ctrl = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
-
-        JMenuItem exemplo = new JMenuItem("Carregar dados de exemplo");
-        exemplo.addActionListener(e -> carregarExemplo());
-
-        JMenuItem exportar = new JMenuItem("Exportar separador atual para CSV...");
-        exportar.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_E, ctrl));
-        exportar.addActionListener(e -> exportarSeparadorAtual());
-
-        JMenuItem recarregar = new JMenuItem("Recarregar da base de dados");
-        recarregar.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0));
-        recarregar.addActionListener(e -> {
-            if (!tarefas.ocupado()) {
-                tarefas.executar(this, "Recarregar da base de dados", () -> servico::recarregar);
-            }
-        });
-
-        JMenuItem sair = new JMenuItem("Sair");
-        sair.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, ctrl));
-        sair.addActionListener(e -> sair());
-
-        JMenu ficheiro = new JMenu("Ficheiro");
-        ficheiro.add(exemplo);
-        ficheiro.add(exportar);
-        ficheiro.addSeparator();
-        ficheiro.add(recarregar);
-        ficheiro.addSeparator();
-        ficheiro.add(sair);
-
-        JCheckBoxMenuItem automatica = new JCheckBoxMenuItem(
-                "Atualização automática (" + INTERVALO_ATUALIZACAO_S + " s)", true);
-        automatica.addItemListener(e -> {
-            boolean ligada = e.getStateChange() == ItemEvent.SELECTED;
-            monitor.atualizacaoAutomatica(ligada, INTERVALO_ATUALIZACAO_S);
-            barra.mensagem(ligada ? "Atualização automática ligada" : "Atualização automática desligada");
-        });
-        JMenu ver = new JMenu("Ver");
-        ver.add(automatica);
-
-        JMenuItem atalhos = new JMenuItem("Atalhos de teclado");
-        atalhos.addActionListener(e -> Util.detalhes(this, "Atalhos de teclado",
-                "F5            recarregar da base de dados\n"
-                        + "Ctrl+E        exportar o separador atual para CSV\n"
-                        + "Ctrl+1 ... 8  mudar de separador\n"
-                        + "Ctrl+Q        sair\n\n"
-                        + "Nas tabelas:\n"
-                        + "  clique no cabeçalho   ordenar\n"
-                        + "  caixa Pesquisar       filtrar (Esc limpa)\n"
-                        + "  duplo clique          ver detalhes\n"
-                        + "  botão direito         copiar linha\n\n"
-                        + "Nos formulários, Enter equivale ao botão principal."));
-        JMenu ajuda = new JMenu("Ajuda");
-        ajuda.add(atalhos);
-
-        JMenuBar menuBar = new JMenuBar();
-        menuBar.add(ficheiro);
-        menuBar.add(ver);
-        menuBar.add(ajuda);
-        return menuBar;
-    }
-
     private void instalarAtalhosDeSeparadores() {
-        int ctrl = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+        int ctrl = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
         InputMap teclas = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         ActionMap acoes = getRootPane().getActionMap();
         for (int i = 0; i < abas.getTabCount(); i++) {
@@ -161,7 +101,37 @@ public class JanelaPrincipal extends JFrame {
         abas.addChangeListener(e -> barra.mensagem("Separador: " + abas.getTitleAt(abas.getSelectedIndex())));
     }
 
-    private void sair() {
+    @Override
+    public void carregarExemplo() {
+        if (!servico.estaVazio()) {
+            Util.info(this, "Os dados de exemplo só podem ser carregados com o sistema vazio.");
+            return;
+        }
+        tarefas.executar(this, "Carregar dados de exemplo", () -> servico::carregarExemplo);
+    }
+
+    @Override
+    public void recarregar() {
+        if (!tarefas.ocupado()) {
+            tarefas.executar(this, "Recarregar da base de dados", () -> servico::recarregar);
+        }
+    }
+
+    @Override
+    public void cancelarPendentesSemPagamento() {
+        if (!tarefas.ocupado()) {
+            painelContractos.cancelarPendentesSemPagamento(tarefas);
+        }
+    }
+
+    @Override
+    public void atualizacaoAutomatica(boolean ligada) {
+        monitor.atualizacaoAutomatica(ligada, INTERVALO_ATUALIZACAO_S);
+        barra.mensagem(ligada ? "Atualização automática ligada" : "Atualização automática desligada");
+    }
+
+    @Override
+    public void sair() {
         if (tarefas.ocupado()) {
             int r = JOptionPane.showConfirmDialog(this,
                     "Ainda há operações em curso. Sair mesmo assim?", "Sair", JOptionPane.YES_NO_OPTION);
@@ -174,15 +144,33 @@ public class JanelaPrincipal extends JFrame {
         dispose();
     }
 
-    private void carregarExemplo() {
-        if (!servico.estaVazio()) {
-            Util.info(this, "Os dados de exemplo só podem ser carregados com o sistema vazio.");
-            return;
-        }
-        tarefas.executar(this, "Carregar dados de exemplo", () -> servico::carregarExemplo);
+    @Override
+    public void mostrarAtalhos() {
+        Util.detalhes(this, "Atalhos de teclado",
+                "F5            recarregar da base de dados\n"
+                        + "Ctrl+E        exportar o separador atual para CSV\n"
+                        + "Ctrl+1 ... 8  mudar de separador\n"
+                        + "Ctrl+Q        sair\n\n"
+                        + "Nas tabelas:\n"
+                        + "  clique no cabeçalho   ordenar\n"
+                        + "  caixa Pesquisar       filtrar (Esc limpa)\n"
+                        + "  duplo clique          ver detalhes\n"
+                        + "  botão direito         copiar linha\n\n"
+                        + "Nos formulários, Enter equivale ao botão principal.");
     }
 
-    private void exportarSeparadorAtual() {
+    @Override
+    public void mostrarSobre() {
+        Util.detalhes(this, "Sobre",
+                "Sistema de Gestão de Residência Universitária\n"
+                        + "Java Swing + MariaDB\n\n"
+                        + "Fluxo: Requisição → (aprovada) → Contracto (reserva a cama)\n"
+                        + "       → Pagamento (ativa o contracto, ocupa a cama)\n"
+                        + "       → Cancelamento (liberta a cama).");
+    }
+
+    @Override
+    public void exportarSeparadorAtual() {
         Component atual = abas.getSelectedComponent();
         if (!(atual instanceof Exportavel)) {
             Util.info(this, "Este separador não tem uma tabela para exportar.");
@@ -208,7 +196,7 @@ public class JanelaPrincipal extends JFrame {
             cabecalho.add(tabela.getColumnName(c));
         }
         List<List<String>> linhas = new ArrayList<>();
-        for (int r = 0; r < tabela.getRowCount(); r++) {   // ordem e filtro que o utilizador está a ver
+        for (int r = 0; r < tabela.getRowCount(); r++) {
             List<String> linha = new ArrayList<>();
             for (int c = 0; c < tabela.getColumnCount(); c++) {
                 linha.add(String.valueOf(tabela.getValueAt(r, c)));

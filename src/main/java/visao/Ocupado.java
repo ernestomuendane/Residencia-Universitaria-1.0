@@ -6,7 +6,6 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 
-
 public class Ocupado extends JComponent {
 
     private final Timer atraso = new Timer(250, e -> {

@@ -79,7 +79,7 @@ public final class Util {
     public static <T> T selecionado(JTable tabela, List<T> dados) {
         int vista = tabela.getSelectedRow();
         if (vista < 0) return null;
-        int i = tabela.convertRowIndexToModel(vista);   // a ordenação e o filtro mudam a ordem visível
+        int i = tabela.convertRowIndexToModel(vista);
         return i < dados.size() ? dados.get(i) : null;
     }
 
@@ -234,8 +234,9 @@ public final class Util {
         return s;
     }
 
+
     public static String obrigatorio(String texto, String campo) {
-        if (texto == null || texto.isBlank()) {
+        if (texto == null || texto.trim().isEmpty()) {
             throw new IllegalArgumentException(campo + " é obrigatório");
         }
         return texto.trim();
@@ -254,6 +255,19 @@ public final class Util {
             return new BigDecimal(obrigatorio(texto, campo).replace(',', '.'));
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(campo + " deve ser um número");
+        }
+    }
+
+    public static LocalDateTime dataHora(String texto, String campo) {
+        String t = obrigatorio(texto, campo);
+        try {
+            return LocalDateTime.parse(t, FMT_DATA_HORA);
+        } catch (DateTimeParseException e) {
+            try {
+                return LocalDate.parse(t, FMT_DATA).atStartOfDay();
+            } catch (DateTimeParseException e2) {
+                throw new IllegalArgumentException(campo + " inválida (usa dd/MM/aaaa HH:mm)");
+            }
         }
     }
 
@@ -282,6 +296,10 @@ public final class Util {
 
     public static String hoje() {
         return LocalDate.now().format(FMT_DATA);
+    }
+
+    public static String agora() {
+        return LocalDateTime.now().format(FMT_DATA_HORA);
     }
 
     public static void info(Component pai, String mensagem) {

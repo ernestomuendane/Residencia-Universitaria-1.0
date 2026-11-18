@@ -39,12 +39,12 @@ public class EcraArranque extends JFrame {
         setVisible(true);
         barra.setValue(0);
 
-        SwingWorker<Void, String> worker = new SwingWorker<>() {
+        SwingWorker<Void, String> worker = new SwingWorker<Void, String>() {
             @Override
             protected Void doInBackground() {
                 servico.recarregar((n, total, texto) -> {
-                    setProgress(100 * n / total);   // dispara PropertyChange "progress" na EDT
-                    publish(texto);                 // entrega mensagens a process(), na EDT
+                    setProgress(100 * n / total);
+                    publish(texto);
                 });
                 return null;
             }

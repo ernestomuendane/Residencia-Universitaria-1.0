@@ -31,7 +31,7 @@ public class PainelResidencias extends JPanel implements Exportavel {
     private final JTextField tipo = new JTextField(14);
     private final JTextField numeroQuarto = new JTextField(14);
     private final JComboBox<Categoria> categoria = Util.combo(c -> c.getNome() + " (" + c.getCapacidade() + " camas)");
-    private final JComboBox<EstadoCama> estadoCama = new JComboBox<>(EstadoCama.values());
+    private final JComboBox<EstadoCama> estadoCama = new JComboBox<>(new EstadoCama[]{EstadoCama.DISPONIVEL, EstadoCama.MANUTENCAO});
 
     public PainelResidencias(ServicoResidencia servico, Tarefas tarefas) {
         super(new BorderLayout(8, 8));

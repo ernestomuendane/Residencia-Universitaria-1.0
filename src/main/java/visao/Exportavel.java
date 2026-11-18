@@ -1,8 +1,9 @@
 package visao;
 
-import javax.swing.*;
+import javax.swing.JTable;
 
-public class Exportavel {
+public interface Exportavel {
+
     JTable getTabelaPrincipal();
 
     String getNomeExportacao();

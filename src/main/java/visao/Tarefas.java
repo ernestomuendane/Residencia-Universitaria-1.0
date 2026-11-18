@@ -73,7 +73,7 @@ public final class Tarefas {
         }
         mensagem(descricao + "...");
 
-        SwingWorker<Void, Void> worker = new SwingWorker<>() {
+        SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() throws Exception {
                 return trabalho.call();
@@ -111,7 +111,7 @@ public final class Tarefas {
             return;
         }
         final int geracao = escritas.get();
-        SwingWorker<ServicoResidencia.Instantaneo, Void> worker = new SwingWorker<>() {
+        SwingWorker<ServicoResidencia.Instantaneo, Void> worker = new SwingWorker<ServicoResidencia.Instantaneo, Void>() {
             @Override
             protected ServicoResidencia.Instantaneo doInBackground() {
                 return servico.ler(null);

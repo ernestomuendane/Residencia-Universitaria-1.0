@@ -19,7 +19,7 @@ public class PainelRequisicoes extends JPanel implements Exportavel {
 
     private final JComboBox<Estudante> estudante = Util.combo(e -> e.getIdEstudante() + " · " + e.getNome());
     private final JComboBox<Residencia> residencia = Util.combo(Residencia::getNome);
-    private final JComboBox<Administrador> administrador = Util.combo(a -> a.getIdAdministrador() + " · " + a.getNome());
+    private final JLabel responsavel = new JLabel("—");
 
     public PainelRequisicoes(ServicoResidencia servico, Tarefas tarefas) {
         super(new BorderLayout(8, 8));
@@ -39,21 +39,23 @@ public class PainelRequisicoes extends JPanel implements Exportavel {
         }));
 
         JPanel formDecisao = Util.formulario("Decisão (requisição selecionada)");
-        Util.campo(formDecisao, 0, "Administrador:", administrador);
+        Util.campo(formDecisao, 0, "Responsável:", responsavel);
         JButton aprovar = new JButton("Aprovar");
-        JButton rejeitar = new JButton("Rejeitar");
+        JButton rejeitar = new JButton("Não aprovar");
         Util.linhaBotoes(formDecisao, 1, aprovar, rejeitar);
 
         aprovar.addActionListener(e -> tarefas.executar(this, "Aprovar requisição", () -> {
-            Administrador a = admin();
             Requisicao r = requisicao();
-            return () -> servico.aprovarRequisicao(a, r);
+            return () -> servico.aprovarRequisicao(r);
         }));
-        rejeitar.addActionListener(e -> tarefas.executar(this, "Rejeitar requisição", () -> {
-            Administrador a = admin();
+        rejeitar.addActionListener(e -> tarefas.executar(this, "Não aprovar requisição", () -> {
             Requisicao r = requisicao();
-            return () -> servico.rejeitarRequisicao(a, r);
+            return () -> servico.rejeitarRequisicao(r);
         }));
+
+        tabela.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) atualizarResponsavel();
+        });
 
         Util.aoDuploClique(tabela, () -> {
             Requisicao r = Util.selecionado(tabela, linhas);
@@ -90,19 +92,25 @@ public class PainelRequisicoes extends JPanel implements Exportavel {
         return Util.exigir(Util.selecionado(tabela, linhas), "Seleciona uma requisição na tabela");
     }
 
-    private Administrador admin() {
-        return Util.exigir((Administrador) administrador.getSelectedItem(), "Regista primeiro um administrador");
+    private void atualizarResponsavel() {
+        Requisicao r = Util.selecionado(tabela, linhas);
+        if (r == null) {
+            responsavel.setText("—");
+        } else {
+            responsavel.setText(r.getResidencia().getAdministradorAtivo()
+                    .map(Administrador::getNome).orElse("sem administrador ativo"));
+        }
     }
 
     private void atualizar() {
         Util.preencher(estudante, servico.getEstudantes());
         Util.preencher(residencia, servico.getResidencias());
-        Util.preencher(administrador, servico.getAdministradores());
         Util.carregar(tabela, modelo, linhas, servico.getRequisicoes(), r -> new Object[]{
                 r.getIdRequisicao(), Util.fmt(r.getData()), r.getEstudante().getNome(),
                 r.getResidencia().getNome(), r.getResultado(),
                 r.getAdministrador() == null ? "—" : r.getAdministrador().getNome(),
                 r.getContracto() == null ? "—" : "#" + r.getContracto().getId()});
+        atualizarResponsavel();
     }
 
     @Override public JTable getTabelaPrincipal() { return tabela; }
