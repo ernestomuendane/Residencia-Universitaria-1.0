@@ -6,7 +6,7 @@ import modelo.*;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
@@ -76,7 +76,7 @@ public class ServicoResidencia {
         }
     }
 
-     public Instantaneo ler(Progresso p) {
+    public Instantaneo ler(Progresso p) {
         final int total = 10;
         passo(p, 0, total, "A ligar à base de dados...");
         try (Connection c = Conexao.obter()) {
@@ -97,7 +97,7 @@ public class ServicoResidencia {
             passo(p, 8, total, "A ler requisições...");
             Map<Integer, Requisicao> reqs = requisicaoDao.carregar(c, ests, ress, adms);
             passo(p, 9, total, "A ler contractos e pagamentos...");
-            Map<Integer, Contracto> cons = contractoDao.carregar(c, reqs, camas);
+            Map<Integer, Contracto> cons = contractoDao.carregar(c, reqs, camas, adms);
             pagamentoDao.carregar(c, cons);
             passo(p, 10, total, "Concluído");
             return new Instantaneo(cats.values(), ress.values(), ests.values(), adms.values(), reqs.values());
@@ -134,17 +134,30 @@ public class ServicoResidencia {
             try {
                 recarregar();
             } catch (RuntimeException ignorada) {
-                // se nem a leitura funcionar, a mensagem original é a que interessa
             }
             throw e;
         }
     }
 
-    public List<Categoria> getCategorias() { return Collections.unmodifiableList(categorias); }
-    public List<Residencia> getResidencias() { return Collections.unmodifiableList(residencias); }
-    public List<Estudante> getEstudantes() { return Collections.unmodifiableList(estudantes); }
-    public List<Administrador> getAdministradores() { return Collections.unmodifiableList(administradores); }
-    public List<Requisicao> getRequisicoes() { return Collections.unmodifiableList(requisicoes); }
+    public List<Categoria> getCategorias() {
+        return Collections.unmodifiableList(categorias);
+    }
+
+    public List<Residencia> getResidencias() {
+        return Collections.unmodifiableList(residencias);
+    }
+
+    public List<Estudante> getEstudantes() {
+        return Collections.unmodifiableList(estudantes);
+    }
+
+    public List<Administrador> getAdministradores() {
+        return Collections.unmodifiableList(administradores);
+    }
+
+    public List<Requisicao> getRequisicoes() {
+        return Collections.unmodifiableList(requisicoes);
+    }
 
     public List<Contracto> getContractos() {
         return requisicoes.stream()
@@ -155,7 +168,8 @@ public class ServicoResidencia {
 
     public List<Pagamento> getPagamentos() {
         return getContractos().stream()
-                .flatMap(c -> c.getPagamentos().stream())
+                .map(Contracto::getPagamento)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
@@ -182,7 +196,7 @@ public class ServicoResidencia {
         });
     }
 
-       public Residencia criarResidencia(String nome, String tipo) {
+    public Residencia criarResidencia(String nome, String tipo) {
         return persistir(c -> {
             Residencia r = residenciaDao.inserir(c, nome, tipo);
             residencias.add(r);
@@ -222,7 +236,14 @@ public class ServicoResidencia {
 
     public void alterarEstadoCama(Cama cama, EstadoCama estado) {
         persistir(c -> {
-            cama.setEstado(estado);
+            if (estado == EstadoCama.MANUTENCAO) {
+                cama.colocarEmManutencao();
+            } else if (estado == EstadoCama.DISPONIVEL) {
+                cama.sairDeManutencao();
+            } else {
+                throw new IllegalStateException("O estado " + estado
+                        + " é definido pelos contractos; só se escolhe à mão Disponível ou Em manutenção");
+            }
             camaDao.atualizar(c, cama);
             return null;
         });
@@ -247,7 +268,7 @@ public class ServicoResidencia {
     }
 
     public Administrador registarAdministrador(String nome, String telefone, String email,
-                                               LocalDate dataInicio, String grau) {
+                                               LocalDateTime dataInicio, String grau) {
         return persistir(c -> {
             Administrador a = administradorDao.inserir(c, nome, telefone, email, dataInicio, grau);
             administradores.add(a);
@@ -265,26 +286,20 @@ public class ServicoResidencia {
         });
     }
 
-    public Gestao atribuirGestao(Administrador admin, Residencia residencia, LocalDate inicio) {
+    public Gestao atribuirGestao(Administrador admin, Residencia residencia, LocalDateTime inicio) {
         return persistir(c -> {
-            if (!admin.getResidenciasGeridas().isEmpty()) {
-                throw new IllegalStateException("O administrador já gere a residência "
-                        + admin.getResidenciasGeridas().get(0).getNome() + ". Encerra essa gestão primeiro.");
-            }
-            if (!residencia.getAdministradores().isEmpty()) {
-                throw new IllegalStateException("A residência já tem um administrador ativo ("
-                        + residencia.getAdministradores().get(0).getNome() + ").");
-            }
+            admin.validarGestaoPossivel();
             boolean repetida = admin.getGestoes().stream()
                     .anyMatch(g -> g.getResidencia().equals(residencia) && g.getDataInicio().equals(inicio));
             if (repetida) {
                 throw new IllegalStateException("Já existe uma gestão deste administrador nesta residência com esse início.");
             }
+            residencia.validarGestaoPossivel();
             return gestaoDao.inserir(c, admin, residencia, inicio);
         });
     }
 
-    public void encerrarGestao(Gestao gestao, LocalDate fim) {
+    public void encerrarGestao(Gestao gestao, LocalDateTime fim) {
         persistir(c -> {
             gestao.encerrar(fim);
             gestaoDao.atualizar(c, gestao);
@@ -300,23 +315,28 @@ public class ServicoResidencia {
         });
     }
 
-    public void aprovarRequisicao(Administrador admin, Requisicao requisicao) {
+    public void aprovarRequisicao(Requisicao requisicao) {
         persistir(c -> {
-            admin.aprovarRequisicao(requisicao);
+            responsavel(requisicao.getResidencia()).aprovarRequisicao(requisicao);
             requisicaoDao.atualizar(c, requisicao);
             return null;
         });
     }
 
-    public void rejeitarRequisicao(Administrador admin, Requisicao requisicao) {
+    public void rejeitarRequisicao(Requisicao requisicao) {
         persistir(c -> {
-            admin.rejeitarRequisicao(requisicao);
+            responsavel(requisicao.getResidencia()).rejeitarRequisicao(requisicao);
             requisicaoDao.atualizar(c, requisicao);
             return null;
         });
     }
 
-    public Contracto criarContracto(Requisicao requisicao, Cama cama, LocalDate inicial, LocalDate fim) {
+    private static Administrador responsavel(Residencia residencia) {
+        return residencia.getAdministradorAtivo().orElseThrow(() -> new IllegalStateException(
+                "A residência " + residencia.getNome() + " não tem administrador responsável neste momento"));
+    }
+
+    public Contracto criarContracto(Requisicao requisicao, Cama cama, LocalDateTime inicial, LocalDateTime fim) {
         return persistir(c -> {
             if (!requisicao.estaAprovada()) {
                 throw new IllegalStateException("A requisição não está aprovada");
@@ -324,43 +344,51 @@ public class ServicoResidencia {
             if (requisicao.getContracto() != null) {
                 throw new IllegalStateException("A requisição já tem contracto");
             }
-            return contractoDao.inserir(c, requisicao, cama, inicial, fim);
-        });
-    }
-
-    public void ativarContracto(Contracto contracto) {
-        persistir(c -> {
-            contracto.ativar();
-            contractoDao.atualizar(c, contracto);
-            camaDao.atualizar(c, contracto.getCama());
-            return null;
-        });
-    }
-
-    public void terminarContracto(Contracto contracto) {
-        persistir(c -> {
-            contracto.terminar();
-            contractoDao.atualizar(c, contracto);
-            camaDao.atualizar(c, contracto.getCama());
-            return null;
+            Administrador admin = responsavel(requisicao.getResidencia());
+            Contracto contracto = contractoDao.inserir(c, requisicao, cama, admin, inicial, fim);
+            camaDao.atualizar(c, cama);
+            return contracto;
         });
     }
 
     public void cancelarContracto(Contracto contracto) {
         persistir(c -> {
-            contracto.cancelar();
+            contracto.cancelar(responsavel(contracto.getResidencia()));
             contractoDao.atualizar(c, contracto);
             camaDao.atualizar(c, contracto.getCama());
             return null;
         });
     }
 
+    public int cancelarPendentesSemPagamento() {
+        return persistir(c -> {
+            int cancelados = 0;
+            for (Contracto contracto : getContractos()) {
+                if (contracto.deveSerCancelado()) {
+                    contracto.cancelar(responsavel(contracto.getResidencia()));
+                    contractoDao.atualizar(c, contracto);
+                    camaDao.atualizar(c, contracto.getCama());
+                    cancelados++;
+                }
+            }
+            return cancelados;
+        });
+    }
+
     public Pagamento registarPagamento(Contracto contracto, MetodoPagamento metodo, int meses) {
-        return persistir(c -> pagamentoDao.inserir(c, contracto, metodo, meses));
+        return persistir(c -> {
+            if (contracto.temPagamento()) {
+                throw new IllegalStateException("O contracto já tem pagamento");
+            }
+            Pagamento pagamento = pagamentoDao.inserir(c, contracto, metodo, meses);
+            contractoDao.atualizar(c, contracto);
+            camaDao.atualizar(c, contracto.getCama());
+            return pagamento;
+        });
     }
 
     public void carregarExemplo() {
-        LocalDate hoje = LocalDate.now();
+        LocalDateTime agora = LocalDateTime.now().withNano(0);
         Categoria normal = criarCategoria("Normal", 2, new BigDecimal("2500"));
         Categoria suite = criarCategoria("Suite", 1, new BigDecimal("4500"));
 
@@ -379,12 +407,14 @@ public class ServicoResidencia {
             criarCama(q);
         }
 
-        Administrador a1 = registarAdministrador("Ana Macamo", "841234567", "ana.macamo@uni.mz", hoje.minusYears(2), "Sénior");
-        Administrador a2 = registarAdministrador("Paulo Nhaca", "829876543", "paulo.nhaca@uni.mz", hoje.minusMonths(8), "Júnior");
-        atribuirGestao(a1, central, hoje.minusMonths(6));
-        atribuirGestao(a2, norte, hoje.minusMonths(3));
+        Administrador a1 = registarAdministrador("Ana Macamo", "841234567", "ana.macamo@uni.mz", agora.minusYears(2), "Sénior");
+        Administrador a2 = registarAdministrador("Paulo Nhaca", "829876543", "paulo.nhaca@uni.mz", agora.minusMonths(8), "Júnior");
+        registarAdministrador("Rita Sitoe", "834445566", "rita.sitoe@uni.mz", agora.minusMonths(1), "Júnior");
+        atribuirGestao(a1, central, agora.minusMonths(6));
+        atribuirGestao(a2, norte, agora.minusMonths(3));
 
         registarEstudante("Carlos Mondlane", "845550101", "carlos@estudante.uni.mz", Sexo.MASCULINO, "Engenharia Informática");
         registarEstudante("Maria Chissano", "825550202", "maria@estudante.uni.mz", Sexo.FEMININO, "Medicina");
     }
 }
+

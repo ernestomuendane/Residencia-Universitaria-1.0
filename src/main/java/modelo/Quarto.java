@@ -1,8 +1,10 @@
 package modelo;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class Quarto {
 
@@ -37,7 +39,7 @@ public class Quarto {
         return categoria;
     }
 
-    public void setCategoria(Categoria categoria) {
+    public void setCategoria(Categoria nova) {
         Objects.requireNonNull(nova, "Categoria obrigatória");
         if (camas.size() > nova.getCapacidade()) {
             throw new IllegalStateException("O quarto tem mais camas do que a capacidade da nova categoria");
@@ -52,7 +54,7 @@ public class Quarto {
     }
 
     public Cama adicionarCama(int idCama) {
-        return new Cama(idCama, EstadoCama.LIVRE, this);
+        return new Cama(idCama, EstadoCama.DISPONIVEL, this);
     }
 
     public List<Cama> getCamas() {
@@ -60,14 +62,13 @@ public class Quarto {
     }
 
     public List<Cama> getCamasLivres() {
-        return camas.stream().filter(Cama::estaLivre).collect(Collectors.toList());
+        return camas.stream().filter(Cama::estaDisponivel).collect(Collectors.toList());
     }
 
     public boolean estaCheio() {
         return camas.size() >= categoria.getCapacidade();
     }
 
-    /** Chamado apenas pelo construtor de Cama. */
     void registarCama(Cama cama) {
         if (camas.contains(cama)) {
             return;

@@ -13,7 +13,7 @@ public final class Conexao {
     private static final Properties FICHEIRO = lerFicheiro();
 
     static {
-        DriverManager.setLoginTimeout(5); // não deixar a interface à espera de um servidor em baixo
+        DriverManager.setLoginTimeout(5);
     }
 
     private Conexao() {

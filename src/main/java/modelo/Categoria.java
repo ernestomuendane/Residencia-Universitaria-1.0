@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class Categoria {
 
@@ -57,6 +58,7 @@ public class Categoria {
     }
 
     public void setPreco(BigDecimal preco) {
+        Objects.requireNonNull(preco, "O preço é obrigatório");
         if (preco.signum() < 0) {
             throw new IllegalArgumentException("O preço não pode ser negativo");
         }

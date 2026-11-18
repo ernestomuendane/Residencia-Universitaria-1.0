@@ -3,16 +3,17 @@ package modelo;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class Residencia {
+
     private final int idResidencia;
-    private  String nome;
+    private String nome;
     private String tipo;
     private final List<Quarto> quartos = new ArrayList<>();      // composição
     private final List<Gestao> gestoes = new ArrayList<>();
     private final List<Requisicao> requisicoes = new ArrayList<>();
-
 
     public Residencia(int idResidencia, String nome, String tipo) {
         this.idResidencia = idResidencia;
@@ -20,27 +21,27 @@ public class Residencia {
         setTipo(tipo);
     }
 
-    public int getIdResidencia(){
+    public int getIdResidencia() {
         return idResidencia;
     }
 
-    public String getNome(){
+    public String getNome() {
         return nome;
     }
 
-    public void setNome(String nome){
-        if (nome == null || nome.isBlank()) {
+    public void setNome(String nome) {
+        if (nome == null || nome.trim().isEmpty()) {
             throw new IllegalArgumentException("O nome é obrigatório");
         }
         this.nome = nome;
     }
 
-    public String getTipo(){
+    public String getTipo() {
         return tipo;
     }
 
-    public void setTipo( String tipo) {
-        if (tipo == null || tipo.isBlank()) {
+    public void setTipo(String tipo) {
+        if (tipo == null || tipo.trim().isEmpty()) {
             throw new IllegalArgumentException("O tipo é obrigatório");
         }
         this.tipo = tipo;
@@ -62,10 +63,9 @@ public class Residencia {
 
     public List<Cama> getCamasLivres() {
         return getCamas().stream()
-                .filter(Cama::estaLivre)
+                .filter(Cama::estaDisponivel)
                 .collect(Collectors.toList());
     }
-
 
     public List<Gestao> getGestoes() {
         return Collections.unmodifiableList(gestoes);
@@ -76,6 +76,15 @@ public class Residencia {
                 .filter(Gestao::estaAtiva)
                 .map(Gestao::getAdministrador)
                 .collect(Collectors.toList());
+    }
+
+    public Optional<Administrador> getAdministradorAtivo() {
+        for (Gestao g : gestoes) {
+            if (g.estaAtiva()) {
+                return Optional.of(g.getAdministrador());
+            }
+        }
+        return Optional.empty();
     }
 
     public List<Requisicao> getRequisicoes() {
@@ -98,6 +107,14 @@ public class Residencia {
         }
         if (!quartos.contains(quarto)) {
             quartos.add(quarto);
+        }
+    }
+
+    public void validarGestaoPossivel() {
+        Optional<Administrador> atual = getAdministradorAtivo();
+        if (atual.isPresent()) {
+            throw new IllegalStateException("A residência já tem um administrador ativo ("
+                    + atual.get().getNome() + ").");
         }
     }
 

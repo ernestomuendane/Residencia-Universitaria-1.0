@@ -1,18 +1,17 @@
 package modelo;
 
-import javax.management.relation.RelationSupport;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 public class Requisicao {
+
     private final int idRequisicao;
-    private LocalDateTime data = LocalDateTime.now();
+    private final LocalDateTime data;
     private ResultadoRequisicao resultado;
     private final Estudante estudante;
     private final Residencia residencia;
-    private Contracto contracto;
     private Administrador administrador;
+    private Contracto contracto;
 
     public Requisicao(int idRequisicao, LocalDateTime data, Estudante estudante, Residencia residencia) {
         this(idRequisicao, data, ResultadoRequisicao.PENDENTE, estudante, residencia);
@@ -30,6 +29,15 @@ public class Requisicao {
         residencia.registarRequisicao(this);
     }
 
+    public Requisicao(int idRequisicao, LocalDateTime data, ResultadoRequisicao resultado,
+                      Estudante estudante, Residencia residencia, Administrador administrador) {
+        this(idRequisicao, data, resultado, estudante, residencia);
+        if (administrador != null) {
+            this.administrador = administrador;
+            administrador.registarRequisicao(this);
+        }
+    }
+
     public int getIdRequisicao() {
         return idRequisicao;
     }
@@ -38,26 +46,24 @@ public class Requisicao {
         return data;
     }
 
-    public ResultadoRequisicao getResultado(){
-        return  resultado;
+    public ResultadoRequisicao getResultado() {
+        return resultado;
     }
 
-    public void setResultado(String resultado) {
-        this.resultado = resultado;
+    public Estudante getEstudante() {
+        return estudante;
     }
 
-    public Estudante getEstudante(){return estudante;}
-
-    public Residencia getResidencia(){
+    public Residencia getResidencia() {
         return residencia;
-    }
-
-    public Contracto getContracto() {
-        return contracto;
     }
 
     public Administrador getAdministrador() {
         return administrador;
+    }
+
+    public Contracto getContracto() {
+        return contracto;
     }
 
     public boolean estaPendente() {
@@ -65,13 +71,13 @@ public class Requisicao {
     }
 
     public boolean estaAprovada() {
-        return resultado == ResultadoRequisicao.APROVADA;
+        return resultado == ResultadoRequisicao.APROVADO;
     }
 
     void decidir(Administrador admin, ResultadoRequisicao novoResultado) {
         Objects.requireNonNull(admin, "Administrador obrigatório");
         if (novoResultado == ResultadoRequisicao.PENDENTE) {
-            throw new IllegalArgumentException("A decisão deve ser APROVADA ou REJEITADA");
+            throw new IllegalArgumentException("A decisão deve ser APROVADO ou NAO_APROVADO");
         }
         if (!estaPendente()) {
             throw new IllegalStateException("A requisição " + idRequisicao + " já foi decidida");

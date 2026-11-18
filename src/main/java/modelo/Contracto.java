@@ -1,25 +1,37 @@
 package modelo;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 public class Contracto {
 
     private final int idContracto;
-    private final LocalDate dataAssinatura;
-    private final LocalDate dataInicial;
-    private final LocalDate dataFinal;
+    private final LocalDateTime dataAssinatura;
+    private final LocalDateTime dataInicial;
+    private final LocalDateTime dataFinal;
     private EstadoContracto estado;
     private final Requisicao requisicao;
     private final Cama cama;
-    private final List<Pagamento> pagamentos = new ArrayList<>();
+    private final Administrador administrador;
+    private Pagamento pagamento;
 
-    public Contracto(int idContracto, LocalDate dataAssinatura, LocalDate dataInicial,
-                     LocalDate dataFinal, Requisicao requisicao, Cama cama) {
+    public Contracto(int idContracto, LocalDateTime dataAssinatura, LocalDateTime dataInicial,
+                     LocalDateTime dataFinal, Requisicao requisicao, Cama cama, Administrador administrador) {
+        this(idContracto, dataAssinatura, dataInicial, dataFinal, EstadoContracto.PENDENTE,
+                requisicao, cama, administrador, true);
+    }
+
+    public Contracto(int idContracto, LocalDateTime dataAssinatura, LocalDateTime dataInicial,
+                     LocalDateTime dataFinal, EstadoContracto estado, Requisicao requisicao,
+                     Cama cama, Administrador administrador) {
+        this(idContracto, dataAssinatura, dataInicial, dataFinal, estado, requisicao, cama, administrador, false);
+    }
+
+    private Contracto(int idContracto, LocalDateTime dataAssinatura, LocalDateTime dataInicial,
+                      LocalDateTime dataFinal, EstadoContracto estado, Requisicao requisicao,
+                      Cama cama, Administrador administrador, boolean novo) {
+        Objects.requireNonNull(estado, "Estado obrigatório");
         Objects.requireNonNull(requisicao, "Requisição obrigatória");
         Objects.requireNonNull(cama, "Cama obrigatória");
         Objects.requireNonNull(dataInicial, "Data inicial obrigatória");
@@ -37,14 +49,23 @@ public class Contracto {
         if (!cama.getQuarto().getResidencia().equals(requisicao.getResidencia())) {
             throw new IllegalArgumentException("A cama não pertence à residência da requisição");
         }
+        if (novo) {
+            Objects.requireNonNull(administrador, "Administrador obrigatório");
+            if (!administrador.gere(requisicao.getResidencia())) {
+                throw new IllegalStateException("O administrador não é o responsável pela residência "
+                        + requisicao.getResidencia().getNome());
+            }
+            cama.reservar(); // falha se a cama não estiver disponível; só depois se liga tudo
+        }
 
         this.idContracto = idContracto;
-        this.dataAssinatura = dataAssinatura != null ? dataAssinatura : LocalDate.now();
+        this.dataAssinatura = dataAssinatura != null ? dataAssinatura : LocalDateTime.now();
         this.dataInicial = dataInicial;
         this.dataFinal = dataFinal;
-        this.estado = EstadoContracto.PENDENTE;
+        this.estado = estado;
         this.requisicao = requisicao;
         this.cama = cama;
+        this.administrador = administrador;
 
         requisicao.setContracto(this);
         cama.registarContracto(this);
@@ -54,15 +75,15 @@ public class Contracto {
         return idContracto;
     }
 
-    public LocalDate getDataAssinatura() {
+    public LocalDateTime getDataAssinatura() {
         return dataAssinatura;
     }
 
-    public LocalDate getDataInicial() {
+    public LocalDateTime getDataInicial() {
         return dataInicial;
     }
 
-    public LocalDate getDataFinal() {
+    public LocalDateTime getDataFinal() {
         return dataFinal;
     }
 
@@ -78,6 +99,10 @@ public class Contracto {
         return cama;
     }
 
+    public Administrador getAdministrador() {
+        return administrador;
+    }
+
     public Estudante getEstudante() {
         return requisicao.getEstudante();
     }
@@ -90,49 +115,53 @@ public class Contracto {
         return cama.getQuarto().getCategoria().getPreco();
     }
 
-    public void ativar() {
-        if (estado != EstadoContracto.PENDENTE) {
-            throw new IllegalStateException("Só um contracto pendente pode ser ativado");
-        }
-        cama.ocupar();
-        estado = EstadoContracto.ATIVO;
-    }
 
-    public void terminar() {
-        if (estado != EstadoContracto.ATIVO) {
-            throw new IllegalStateException("Só um contracto ativo pode ser terminado");
+    public void cancelar(Administrador responsavel) {
+        Objects.requireNonNull(responsavel, "Administrador obrigatório");
+        if (estado == EstadoContracto.CANCELADO) {
+            throw new IllegalStateException("O contracto já está cancelado");
         }
-        estado = EstadoContracto.TERMINADO;
+        if (!responsavel.gere(getResidencia())) {
+            throw new IllegalStateException("O administrador não é o responsável pela residência "
+                    + getResidencia().getNome());
+        }
         cama.libertar();
-    }
-
-    public void cancelar() {
-        if (estado == EstadoContracto.TERMINADO || estado == EstadoContracto.CANCELADO) {
-            throw new IllegalStateException("O contracto já está " + estado);
-        }
-        if (estado == EstadoContracto.ATIVO) {
-            cama.libertar();
-        }
         estado = EstadoContracto.CANCELADO;
     }
 
-    public List<Pagamento> getPagamentos() {
-        return Collections.unmodifiableList(pagamentos);
+    public boolean deveSerCancelado() {
+        return estado == EstadoContracto.PENDENTE && pagamento == null;
+    }
+
+
+    public Pagamento getPagamento() {
+        return pagamento;
+    }
+
+    public boolean temPagamento() {
+        return pagamento != null;
     }
 
     public BigDecimal getTotalPago() {
-        return pagamentos.stream()
-                .map(Pagamento::getValorTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return pagamento == null ? BigDecimal.ZERO : pagamento.getValorTotal();
     }
 
-    void registarPagamento(Pagamento pagamento) {
-        if (estado == EstadoContracto.TERMINADO || estado == EstadoContracto.CANCELADO) {
-            throw new IllegalStateException("Não é possível pagar um contracto " + estado);
+    void registarPagamento(Pagamento novo) {
+        if (estado == EstadoContracto.CANCELADO) {
+            throw new IllegalStateException("Não é possível pagar um contracto cancelado");
         }
-        if (!pagamentos.contains(pagamento)) {
-            pagamentos.add(pagamento);
+        if (pagamento != null) {
+            throw new IllegalStateException("O contracto já tem pagamento");
         }
+        if (estado == EstadoContracto.PENDENTE) {
+            cama.ocupar();
+            estado = EstadoContracto.ATIVO;
+        }
+        pagamento = novo;
+    }
+
+    void restaurarPagamento(Pagamento restaurado) {
+        this.pagamento = restaurado;
     }
 
     @Override

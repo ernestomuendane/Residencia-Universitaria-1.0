@@ -46,8 +46,9 @@ public class Administrador extends Utente {
         }
         this.grau = grau;
     }
-    public Gestao gerir(Residencia residencia, LocalDateTime dataInicio, LocalDateTime dataFim) {
-        return new Gestao(this, residencia, dataInicio, dataFim);
+
+    public Gestao gerir(Residencia residencia, LocalDateTime dataInicio) {
+        return new Gestao(this, residencia, dataInicio, null);
     }
 
     public List<Gestao> getGestoes() {
@@ -62,20 +63,32 @@ public class Administrador extends Utente {
     }
 
     public boolean gere(Residencia residencia) {
-        return gestoes.stream()
-                .anyMatch(g -> g.estaAtiva() && g.getResidencia().equals(residencia));
+        for (Gestao g : gestoes) {
+            if (g.estaAtiva() && g.getResidencia().equals(residencia)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void aprovarRequisicao(Requisicao requisicao) {
-        requisicao.decidir(this, ResultadoRequisicao.APROVADA);
+        requisicao.decidir(this, ResultadoRequisicao.APROVADO);
     }
 
     public void rejeitarRequisicao(Requisicao requisicao) {
-        requisicao.decidir(this, ResultadoRequisicao.REJEITADA);
+        requisicao.decidir(this, ResultadoRequisicao.NAO_APROVADO);
     }
+
 
     public List<Requisicao> getRequisicoes() {
         return Collections.unmodifiableList(requisicoes);
+    }
+
+    public void validarGestaoPossivel() {
+        if (!getResidenciasGeridas().isEmpty()) {
+            throw new IllegalStateException("O administrador já gere a residência "
+                    + getResidenciasGeridas().get(0).getNome() + ". Encerra essa gestão primeiro.");
+        }
     }
 
     void registarGestao(Gestao gestao) {
